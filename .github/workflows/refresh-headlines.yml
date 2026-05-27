@@ -2,8 +2,8 @@ name: Refresh Headlines
 
 on:
   schedule:
-    - cron: '0 9 * * 1-5'  # 5AM ET = 9AM UTC, weekdays only
-  workflow_dispatch:  # allows manual trigger too
+    - cron: '0 9 * * 1-5'
+  workflow_dispatch:
 
 jobs:
   refresh:
@@ -23,7 +23,50 @@ jobs:
       - name: Fetch headlines and update dashboard
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python3 .github/scripts/update_headlines.py
+        run: |
+          python3 - << 'EOF'
+          import anthropic
+          import re
+          from datetime import datetime
+
+          client = anthropic.Anthropic()
+          print("Fetching headlines...")
+
+          message = client.messages.create(
+              model="claude-sonnet-4-20250514",
+              max_tokens=4000,
+              tools=[{"type": "web_search_20250305", "name": "web_search"}],
+              messages=[{
+                  "role": "user",
+                  "content": f"""Today is {datetime.now().strftime('%B %d, %Y')}. Search for today's headlines from these outlets: Wall Street Journal (wsj.com) - 7 headlines, NY Post (nypost.com) - 6 headlines, TechCrunch (techcrunch.com) - 6 headlines, Financial Times (ft.com) - 6 headlines, The Economist (economist.com) - 5 headlines, The Information (theinformation.com) - 5 headlines, Stratechery (stratechery.com) - 4 headlines. Return ONLY a valid JSON array, no markdown, no explanation. Each object: {{"source": "WSJ" or "NY Post" or "TechCrunch" or "FT" or "The Economist" or "The Information" or "Stratechery", "headline": "...", "url": "https://..."}}"""
+              }]
+          )
+
+          text = ""
+          for block in message.content:
+              if hasattr(block, "text"):
+                  text += block.text
+
+          match = re.search(r'\[[\s\S]*\]', text.replace('```json','').replace('```',''))
+          if not match:
+              print("No JSON found in response")
+              exit(1)
+
+          articles_json = match.group(0)
+
+          with open('index.html', 'r') as f:
+              html = f.read()
+
+          html = re.sub(r'const ARTICLES = \[[\s\S]*?\];', f'const ARTICLES = {articles_json};', html)
+
+          today_str = datetime.now().strftime('%A, %B %d, %Y')
+          html = re.sub(r'Last fetched: .*? —', f'Last fetched: {today_str} —', html)
+
+          with open('index.html', 'w') as f:
+              f.write(html)
+
+          print(f"Done — updated with headlines for {today_str}")
+          EOF
 
       - name: Commit and push
         run: |
