@@ -429,7 +429,7 @@ async function loadMeetings() {
   }
 }
 
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwvv-6dKXLi0fCyvBkpob0jCyXzTn3yayXke47N8R1zF9-lm3Y3r7Y8NqQl5Fxas-UD/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbz3UbjpgyIDdaMLi49Nv9Rq7Y14UPvoKMWyFvJ4eCQUpMhSw57IZMtdBFvXjZ77cquQ/exec';
 const SHEETS_TOKEN = 'Peter';
 const HEALTH_FIELDS = ['h-mworkout','h-eworkout','h-breakfast','h-lunch','h-dinner','h-other','h-mweight','h-eweight'];
 
@@ -510,7 +510,7 @@ let syncTimer = null;
 function schedulSync() {
   saveLocal();
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(syncToSheets, 1500);
+  syncTimer = setTimeout(syncToSheets, 4000);
 }
 
 function crystallizeOnEnter(event, fieldId) {
