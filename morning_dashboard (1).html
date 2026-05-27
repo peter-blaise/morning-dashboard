@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morning Dashboard — Peter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f7f7f5; --bg3: #f0efe9;
+    --text: #1a1a18; --text2: #6b6b67; --text3: #9e9e99;
+    --border: rgba(0,0,0,0.09); --border2: rgba(0,0,0,0.18);
+    --blue: #185FA5; --blue-bg: #E6F1FB; --blue-text: #0C447C;
+    --green-bg: #EAF3DE; --green-border: #639922; --green-text: #27500A;
+    --r: 8px; --rl: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #252523; --bg3: #2a2a27;
+      --text: #f0efe9; --text2: #9e9e99; --text3: #6b6b67;
+      --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.18);
+      --blue: #85B7EB; --blue-bg: #042C53; --blue-text: #B5D4F4;
+      --green-bg: #173404; --green-border: #3B6D11; --green-text: #C0DD97;
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  .topbar { display: flex; align-items: baseline; gap: 12px; margin-bottom: 1.75rem; flex-wrap: wrap; }
+  .date { font-size: 22px; font-weight: 500; }
+  .greeting { font-size: 14px; color: var(--text2); }
+  .refresh { margin-left: auto; font-size: 13px; padding: 7px 16px; cursor: pointer; border: 0.5px solid var(--border2); border-radius: var(--r); background: var(--bg); color: var(--text2); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .refresh:hover { background: var(--bg2); }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px; }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--rl); padding: 1.1rem 1.25rem; margin-bottom: 16px; }
+  .ch { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .ct { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; }
+  .ch svg { color: var(--text3); flex-shrink: 0; }
+  .prow { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 0.5px solid var(--border); }
+  .prow:last-child { border-bottom: none; }
+  .pbox { width: 17px; height: 17px; border: 0.5px solid var(--border2); border-radius: 4px; cursor: pointer; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; }
+  .pbox.done { background: var(--green-bg); border-color: var(--green-border); }
+  .plabel { font-size: 14px; color: var(--text); line-height: 1.45; flex: 1; outline: none; }
+  .plabel.done { color: var(--text3); text-decoration: line-through; }
+  .addbtn { font-size: 13px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 8px 0 0; display: flex; align-items: center; gap: 4px; }
+  .addbtn:hover { color: var(--text2); }
+  .mrow { display: flex; gap: 14px; padding: 9px 0; border-bottom: 0.5px solid var(--border); }
+  .mrow:last-child { border-bottom: none; }
+  .mtime { font-size: 12px; color: var(--text3); min-width: 78px; line-height: 1.5; padding-top: 1px; flex-shrink: 0; }
+  .mtitle { font-size: 14px; color: var(--text); line-height: 1.4; }
+  .msub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; margin-left: 8px; vertical-align: middle; }
+  .bnow { background: var(--blue-bg); color: var(--blue-text); }
+  .bnext { background: var(--bg2); color: var(--text2); border: 0.5px solid var(--border2); }
+  .ntabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .ntab { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 99px; border: 0.5px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; white-space: nowrap; }
+  .ntab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .ntab:hover:not(.active) { background: var(--bg2); }
+  .nitem { padding: 9px 0; border-bottom: 0.5px solid var(--border); }
+  .nitem:last-child { border-bottom: none; padding-bottom: 0; }
+  .nsrc { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); margin-bottom: 3px; }
+  .nlink { font-size: 14px; color: var(--text); text-decoration: none; line-height: 1.45; display: flex; align-items: flex-start; gap: 5px; }
+  .nlink:hover { color: var(--blue); }
+  .nlink:hover .ext { opacity: 1; }
+  .ext { flex-shrink: 0; margin-top: 2px; opacity: 0; transition: opacity .15s; }
+  .loading { font-size: 14px; color: var(--text3); padding: 14px 0; display: flex; align-items: center; gap: 10px; }
+  .spin { width: 14px; height: 14px; border: 1.5px solid var(--border2); border-top-color: var(--text2); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .emsg { font-size: 14px; color: var(--text3); padding: 8px 0; }
+  .cnt { font-size: 11px; font-weight: 400; opacity: .6; margin-left: 2px; }
+  .footer-note { font-size: 11px; color: var(--text3); margin-top: 10px; }
+  .footer-note a { color: var(--blue); text-decoration: none; }
+  /* health */
+  .health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .hfield { display: flex; flex-direction: column; gap: 5px; }
+  .hlabel { font-size: 12px; font-weight: 500; color: var(--text2); display: flex; align-items: center; gap: 6px; }
+  .hlabel svg { color: var(--text3); flex-shrink: 0; }
+  .hinput { font-size: 14px; color: var(--text); background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--r); padding: 7px 10px; outline: none; font-family: inherit; resize: none; width: 100%; transition: border-color .15s; }
+  .hinput:focus { border-color: var(--border2); }
+  .hinput::placeholder { color: var(--text3); }
+  .hcal-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 0.5px solid var(--border); }
+  .hcal-label { font-size: 12px; color: var(--text2); flex: 1; }
+  .hcal-total { font-size: 20px; font-weight: 500; color: var(--text); }
+  .hcal-unit { font-size: 12px; color: var(--text3); margin-left: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <span class="date" id="datedisp"></span>
+    <span class="greeting">Good morning, Peter</span>
+    <button class="refresh" onclick="window.open('https://claude.ai/new?q='+encodeURIComponent('Refresh my morning dashboard with the latest headlines'),'_blank')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Refresh headlines ↗
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <span class="ct">Personal health</span>
+    </div>
+    <div class="health-grid">
+      <div class="hfield">
+        <label class="hlabel" for="h-mworkout">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Morning workout
+        </label>
+        <input id="h-mworkout" class="hinput" type="text" placeholder="e.g. 45 min run, weights…" oninput="schedulSync()">
+      </div>
+      <div class="hfield">
+        <label class="hlabel" for="h-eworkout">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Evening workout
+        </label>
+        <input id="h-eworkout" class="hinput" type="text" placeholder="e.g. 30 min bike, yoga…" oninput="schedulSync()">
+      </div>
+      <div class="hfield">
+        <label class="hlabel" for="h-breakfast">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          Breakfast
+        </label>
+        <input id="h-breakfast" class="hinput" type="text" placeholder="What did you eat?" oninput="schedulSync()">
+      </div>
+      <div class="hfield">
+        <label class="hlabel" for="h-lunch">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          Lunch
+        </label>
+        <input id="h-lunch" class="hinput" type="text" placeholder="What did you eat?" oninput="schedulSync()">
+      </div>
+      <div class="hfield">
+        <label class="hlabel" for="h-dinner">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          Dinner
+        </label>
+        <input id="h-dinner" class="hinput" type="text" placeholder="What did you eat?" oninput="schedulSync()">
+      </div>
+      <div class="hfield">
+        <label class="hlabel" for="h-other">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Other calories
+        </label>
+        <input id="h-other" class="hinput" type="text" placeholder="Snacks, drinks, etc." oninput="schedulSync()">
+      </div>
+      <div class="hfield">
+        <label class="hlabel" for="h-mweight">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l2 7H4L6 2z"/><path d="M4 9c0 7 2 11 8 11s8-4 8-11"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+          Morning weigh-in
+        </label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input id="h-mweight" class="hinput" type="number" step="0.1" placeholder="0.0" style="width:100%;" oninput="schedulSync()">
+          <span style="font-size:13px;color:var(--text3);white-space:nowrap;">lbs</span>
+        </div>
+      </div>
+      <div class="hfield">
+        <label class="hlabel" for="h-eweight">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l2 7H4L6 2z"/><path d="M4 9c0 7 2 11 8 11s8-4 8-11"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+          Evening weigh-in
+        </label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input id="h-eweight" class="hinput" type="number" step="0.1" placeholder="0.0" style="width:100%;" oninput="schedulSync()">
+          <span style="font-size:13px;color:var(--text3);white-space:nowrap;">lbs</span>
+        </div>
+      </div>
+    </div>
+    <div class="hcal-row">
+      <span class="hcal-label">Estimated calories consumed</span>
+      <span class="hcal-total" id="cal-total">—</span>
+      <span class="hcal-unit" id="cal-unit"></span>
+      <button class="addbtn" style="padding:0; margin-left:12px;" onclick="estimateCals()" title="Ask Claude to estimate calories">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Estimate ↗
+      </button>
+    </div>
+    <div class="hcal-row" style="border-top:none; padding-top:6px; margin-top:0;">
+      <span class="hcal-label">Estimated calories burned</span>
+      <span class="hcal-total" id="cal-burned">—</span>
+      <span class="hcal-unit" id="cal-burned-unit"></span>
+      <button class="addbtn" style="padding:0; margin-left:12px;" onclick="estimateBurned()" title="Ask Claude to estimate calories burned">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Estimate ↗
+      </button>
+    </div>
+    <div style="margin-top:8px; min-height:16px;">
+      <span id="sync-indicator" style="font-size:12px;"></span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card" style="margin-bottom:0">
+      <div class="ch">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span class="ct">Work priorities</span>
+      </div>
+      <div id="wprior"></div>
+      <button class="addbtn" onclick="addP('w')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add priority
+      </button>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="ch">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="ct">Personal priorities</span>
+      </div>
+      <div id="pprior"></div>
+      <button class="addbtn" onclick="addP('p')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add priority
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span class="ct">Today's meetings</span>
+    </div>
+    <div id="meetings"><div class="loading"><div class="spin"></div>Loading from Outlook…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v2"/><path d="M4 11h8"/><path d="M4 16h8"/><path d="M4 6h8"/></svg>
+      <span class="ct">Today's headlines</span>
+    </div>
+    <div class="ntabs" id="tabs-container"></div>
+    <div id="newslist"></div>
+    <div class="footer-note">Last fetched: Wednesday, May 27, 2026 — <a href="#" onclick="window.open('https://claude.ai/new?q='+encodeURIComponent('Refresh my morning dashboard with the latest headlines'),'_blank');return false;">Get latest ↗</a></div>
+  </div>
+
+</div>
+
+<script>
+const SOURCES = ['WSJ','NY Post','TechCrunch','FT','The Economist','The Information','Stratechery'];
+
+const ARTICLES = [
+  // WSJ
+  { source:'WSJ', headline:'Micron hits $1 trillion market cap as shares surge 19%, UBS sees 100%+ more upside', url:'https://www.wsj.com/finance/stocks/micron-technology-stock-price-trillion-market-cap' },
+  { source:'WSJ', headline:'S&P 500 and Nasdaq close at record highs, led by tech and AI rally', url:'https://www.wsj.com/finance/stocks/stock-market-today-sp500-nasdaq-record-highs' },
+  { source:'WSJ', headline:'Consumer confidence slips in May amid Middle East inflation concerns', url:'https://www.wsj.com/economy/consumer-confidence-may-2026-middle-east' },
+  { source:'WSJ', headline:'Quantum computing stocks surge after report of $2B government grant program for nine firms', url:'https://www.wsj.com/tech/quantum-computing-stocks-government-grants-2026' },
+  { source:'WSJ', headline:'Iran receives initial US framework draft to end war and reopen Strait of Hormuz', url:'https://www.wsj.com/world/middle-east/iran-us-framework-strait-of-hormuz-2026' },
+  { source:'WSJ', headline:'AI trillionaires: the investment cycle minting a new class of the ultra-wealthy', url:'https://www.wsj.com/finance/investing/ai-investment-cycle-billionaires-trillionaires' },
+  { source:'WSJ', headline:'Wells Fargo raises FedEx target to $450, sees 14% upside on Freight leadership', url:'https://www.wsj.com/finance/stocks/wells-fargo-fedex-price-target-450' },
+  // NY Post
+  { source:'NY Post', headline:'Meta begins laying off 8,000 workers in sweeping AI-driven restructuring', url:'https://nypost.com/2026/05/27/business/meta-layoffs-8000-workers-ai-restructuring/' },
+  { source:'NY Post', headline:'SpaceX files S-1 for what would be the largest IPO in history at $1.75 trillion valuation', url:'https://nypost.com/2026/05/27/business/spacex-ipo-s1-filing-largest-history/' },
+  { source:'NY Post', headline:'Micron joins the trillion-dollar club — stock up over 800% in a year', url:'https://nypost.com/2026/05/27/business/micron-technology-trillion-dollar-market-cap/' },
+  { source:'NY Post', headline:'Oil swings as Iran-US peace deal hopes fade, Strait of Hormuz still closed', url:'https://nypost.com/2026/05/27/business/oil-prices-iran-us-war-hormuz/' },
+  { source:'NY Post', headline:'Ferrari unveils $640,000 Luce EV — and fans are not happy about it', url:'https://nypost.com/2026/05/27/auto/ferrari-luce-electric-vehicle-640000/' },
+  { source:'NY Post', headline:'Tech has shed 95,000 jobs in 2026 as AI reshapes the workforce', url:'https://nypost.com/2026/05/27/business/tech-layoffs-2026-ai-jobs/' },
+  // TechCrunch
+  { source:'TechCrunch', headline:'SpaceX S-1 breakdown: $28 trillion TAM, Mars colony pay package, and the math behind the biggest IPO ever', url:'https://techcrunch.com/2026/05/20/the-spacex-ipo-filing-has-arrived/' },
+  { source:'TechCrunch', headline:'Starship\'s path to full reusability looks murky after SpaceX\'s S-1 disclosures', url:'https://techcrunch.com/2026/05/26/starships-path-to-reusability-looks-murky-after-spacexs-s-1/' },
+  { source:'TechCrunch', headline:'How Elon Musk will entrench his control further through the SpaceX IPO', url:'https://techcrunch.com/2026/05/21/how-elon-musk-will-increase-his-power-through-the-spacex-ipo/' },
+  { source:'TechCrunch', headline:'You can no longer Google the word "disregard" — Google\'s AI overhaul has an edge case problem', url:'https://techcrunch.com/2026/05/22/you-can-no-longer-google-the-word-disregard/' },
+  { source:'TechCrunch', headline:'Waymo pauses robotaxi operations in four cities after flooding failures', url:'https://techcrunch.com/2026/05/24/techcrunch-mobility-robotaxi-reality-check/' },
+  { source:'TechCrunch', headline:'Cerebras IPO upsizes: new range $150–$160/share as AI chip demand surges', url:'https://techcrunch.com/2026/05/27/cerebras-ipo-upsizes-ai-chip-demand/' },
+  // FT
+  { source:'FT', headline:'US stocks waver as traders weigh Iran peace deal prospects and earnings outlook', url:'https://www.ft.com/content/us-stocks-iran-peace-deal-may-2026' },
+  { source:'FT', headline:'ECB warns of rising private credit risks amid growing euro area exposure', url:'https://www.ft.com/content/ecb-private-credit-risks-euro-area-2026' },
+  { source:'FT', headline:'SpaceX IPO: the numbers, the ambition, and the questions investors must answer', url:'https://www.ft.com/content/spacex-ipo-s1-analysis-2026' },
+  { source:'FT', headline:'SK Hynix joins the trillion-dollar club as AI memory demand reshapes chip sector', url:'https://www.ft.com/content/sk-hynix-trillion-dollar-memory-chips-2026' },
+  { source:'FT', headline:'Pernod Ricard weighs bid for Brown-Forman in major spirits consolidation move', url:'https://www.ft.com/content/pernod-ricard-brown-forman-deal-2026' },
+  { source:'FT', headline:'Iran war pushes global inflation forecast to 4% in OECD outlook', url:'https://www.ft.com/content/oecd-inflation-forecast-iran-war-2026' },
+  // The Economist
+  { source:'The Economist', headline:'The trillion-dollar chip: what Micron\'s rise says about the new AI economy', url:'https://www.economist.com/business/2026/05/27/micron-trillion-dollar-ai-economy' },
+  { source:'The Economist', headline:'The SpaceX IPO is a bet on Elon Musk\'s vision — and his judgment', url:'https://www.economist.com/business/2026/05/27/spacex-ipo-elon-musk-bet' },
+  { source:'The Economist', headline:'Can a US-Iran deal hold? What the Strait of Hormuz negotiations really mean', url:'https://www.economist.com/middle-east-and-africa/2026/05/27/iran-us-deal-strait-of-hormuz' },
+  { source:'The Economist', headline:'Big Tech\'s job cuts are not a sign of weakness — they are a sign of transition', url:'https://www.economist.com/business/2026/05/27/big-tech-layoffs-ai-transition' },
+  { source:'The Economist', headline:'The agentic future: how AI agents are beginning to replace software seats', url:'https://www.economist.com/technology-quarterly/2026/05/ai-agents-enterprise-software' },
+  // The Information
+  { source:'The Information', headline:'Baseten in talks to raise $1B at $11B valuation, doubling up in just three months', url:'https://www.theinformation.com/articles/baseten-raise-1-billion-11-billion-valuation' },
+  { source:'The Information', headline:'AI agents are forcing ServiceNow, SAP and peers to rethink per-seat pricing', url:'https://www.theinformation.com/articles/ai-agents-enterprise-software-per-seat-pricing' },
+  { source:'The Information', headline:'Qualcomm lands ByteDance as a customer in push to expand AI compute beyond mobile', url:'https://www.theinformation.com/articles/qualcomm-bytedance-ai-compute-deal' },
+  { source:'The Information', headline:'Inside Meta\'s AI restructuring: four new orgs, 7,000 redeployments, and Alexandr Wang\'s expanding mandate', url:'https://www.theinformation.com/articles/meta-ai-restructuring-alexandr-wang-2026' },
+  { source:'The Information', headline:'The $3 trillion test: SpaceX, OpenAI and the IPO wave that will price the AI boom', url:'https://www.theinformation.com/articles/spacex-openai-ipo-wave-ai-valuation' },
+  // Stratechery
+  { source:'Stratechery', headline:'The inference shift: why agentic inference will be architecturally different — and what it means for Nvidia', url:'https://stratechery.com/2026/the-inference-shift/' },
+  { source:'Stratechery', headline:'Amazon\'s durability: why AWS is better positioned in the inference era than the training era', url:'https://stratechery.com/2026/amazons-durability/' },
+  { source:'Stratechery', headline:'Elon\'s OpenAI lawsuit is boring and insulting — and it\'s already a success', url:'https://techcrunch.com/2026/05/15/elon-openai-lawsuit-boring-insulting-success/' },
+  { source:'Stratechery', headline:'Data center discontent: the only solution that will work is simply paying communities off', url:'https://stratechery.com/2026/data-center-discontent-understanding-the-opposition-fixing-the-problem/' },
+  { source:'Stratechery', headline:'Cerebras IPO upsizing is the clearest sign yet that we are in a chip supercycle', url:'https://stratechery.com/2026/cerebras-ipo-chip-supercycle/' },
+];
+
+const wItems = [
+  {t:'Review Olo Q2 board prep materials', done:false},
+  {t:'Follow up on active deal pipeline', done:false},
+  {t:'Prep for LP call this week', done:false},
+];
+const pItems = [
+  {t:'Schedule annual physical', done:false},
+  {t:'Review weekend plans', done:false},
+];
+
+function renderP(id, arr) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  arr.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'prow';
+    const box = document.createElement('div');
+    box.className = 'pbox' + (item.done ? ' done' : '');
+    if (item.done) box.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--green-text)"><polyline points="20 6 9 17 4 12"/></svg>';
+    box.onclick = () => { arr[i].done = !arr[i].done; renderP(id, arr); };
+    const lbl = document.createElement('span');
+    lbl.className = 'plabel' + (item.done ? ' done' : '');
+    lbl.contentEditable = true;
+    lbl.textContent = item.t;
+    lbl.oninput = () => { arr[i].t = lbl.textContent; };
+    row.appendChild(box); row.appendChild(lbl);
+    el.appendChild(row);
+  });
+}
+function addP(type) {
+  const arr = type === 'w' ? wItems : pItems;
+  const id = type === 'w' ? 'wprior' : 'pprior';
+  arr.push({t:'New item', done:false});
+  renderP(id, arr);
+  const rows = document.getElementById(id).querySelectorAll('.plabel');
+  const last = rows[rows.length-1];
+  last.focus();
+  const r = document.createRange(); r.selectNodeContents(last);
+  window.getSelection().removeAllRanges(); window.getSelection().addRange(r);
+}
+
+let activeTab = 'all';
+
+function buildTabs() {
+  const container = document.getElementById('tabs-container');
+  const allSrcs = ['all', ...SOURCES];
+  container.innerHTML = allSrcs.map(s => {
+    const label = s === 'all' ? 'All' : s;
+    const id = 'tab-' + s;
+    return `<button class="ntab${s==='all'?' active':''}" onclick="tab('${s}')" id="${id}">${label} <span class="cnt" id="c-${s}"></span></button>`;
+  }).join('');
+}
+
+function tab(t) {
+  activeTab = t;
+  document.querySelectorAll('.ntab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + t).classList.add('active');
+  renderNews();
+}
+
+function renderNews() {
+  const filtered = activeTab === 'all' ? ARTICLES : ARTICLES.filter(a => a.source === activeTab);
+  const srcs = activeTab === 'all' ? SOURCES : [activeTab];
+  let html = '';
+  srcs.forEach(s => {
+    filtered.filter(a => a.source === s).forEach(a => {
+      html += `<div class="nitem">
+        ${activeTab==='all' ? `<div class="nsrc">${a.source}</div>` : ''}
+        <a class="nlink" href="${a.url}" target="_blank" rel="noopener">${a.headline}
+          <svg class="ext" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      </div>`;
+    });
+  });
+  document.getElementById('newslist').innerHTML = html || '<div class="emsg">No headlines for this source.</div>';
+  SOURCES.forEach(s => {
+    const el = document.getElementById('c-' + s);
+    if (el) el.textContent = '(' + ARTICLES.filter(a => a.source === s).length + ')';
+  });
+  const allEl = document.getElementById('c-all');
+  if (allEl) allEl.textContent = '(' + ARTICLES.length + ')';
+}
+
+async function loadMeetings() {
+  const el = document.getElementById('meetings');
+  try {
+    const today = new Date();
+    const s = new Date(today); s.setHours(0,0,0,0);
+    const e = new Date(today); e.setHours(23,59,59,999);
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1000,
+        mcp_servers:[{type:'url',url:'https://microsoft365.mcp.claude.com/mcp',name:'m365'}],
+        messages:[{role:'user',content:`Use outlook_calendar_search to get all calendar events for today ${today.toDateString()} from ${s.toISOString()} to ${e.toISOString()}. Return ONLY a JSON array, no markdown. Fields: title, start (ISO), end (ISO), location (null if none), attendees (array max 3 names). Return [] if none.`}]
+      })
+    });
+    const data = await resp.json();
+    const txt = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    let evs = [];
+    try { const m = txt.replace(/```json|```/g,'').trim().match(/\[[\s\S]*\]/); if(m) evs = JSON.parse(m[0]); } catch(e){}
+    if (!evs.length) { el.innerHTML='<div class="emsg">No meetings scheduled today.</div>'; return; }
+    const now = new Date();
+    el.innerHTML = evs.map(ev => {
+      const st=new Date(ev.start), en=new Date(ev.end);
+      const fmt=d=>d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+      const isNow=now>=st&&now<=en, isNext=!isNow&&st>now&&(st-now)<5400000;
+      const badge=isNow?'<span class="badge bnow">Now</span>':isNext?'<span class="badge bnext">Next</span>':'';
+      const sub=[ev.location,ev.attendees&&ev.attendees.length?ev.attendees.slice(0,3).join(', '):null].filter(Boolean).join(' · ');
+      return `<div class="mrow"><div class="mtime">${fmt(st)}<br>${fmt(en)}</div><div><div class="mtitle">${ev.title}${badge}</div>${sub?`<div class="msub">${sub}</div>`:''}</div></div>`;
+    }).join('');
+  } catch(err) {
+    el.innerHTML = '<div class="emsg">Calendar unavailable — make sure Microsoft 365 is connected in Claude.ai.</div>';
+  }
+}
+
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwvv-6dKXLi0fCyvBkpob0jCyXzTn3yayXke47N8R1zF9-lm3Y3r7Y8NqQl5Fxas-UD/exec';
+const SHEETS_TOKEN = 'Peter';
+const HEALTH_FIELDS = ['h-mworkout','h-eworkout','h-breakfast','h-lunch','h-dinner','h-other','h-mweight','h-eweight'];
+
+function saveLocal() {
+  const today = new Date().toLocaleDateString();
+  const data = { date: today };
+  HEALTH_FIELDS.forEach(id => { data[id] = document.getElementById(id).value; });
+  localStorage.setItem('health_data', JSON.stringify(data));
+}
+
+function loadLocal() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('health_data'));
+    if (!saved) return;
+    const today = new Date().toLocaleDateString();
+    if (saved.date !== today) { localStorage.removeItem('health_data'); return; }
+    HEALTH_FIELDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && saved[id] !== undefined) el.value = saved[id];
+    });
+    const indicator = document.getElementById('sync-indicator');
+    if (indicator) { indicator.textContent = 'Loaded today\'s data'; indicator.style.color = 'var(--text3)'; setTimeout(() => { indicator.textContent = ''; }, 2000); }
+  } catch(e) {}
+}
+
+function syncToSheets() {
+  const today = new Date();
+  const dateStr = `${today.getMonth()+1}/${today.getDate()}/${today.getFullYear()}`;
+  const payload = {
+    token: SHEETS_TOKEN,
+    date: dateStr,
+    mworkout: document.getElementById('h-mworkout').value.trim(),
+    eworkout: document.getElementById('h-eworkout').value.trim(),
+    breakfast: document.getElementById('h-breakfast').value.trim(),
+    lunch: document.getElementById('h-lunch').value.trim(),
+    dinner: document.getElementById('h-dinner').value.trim(),
+    other: document.getElementById('h-other').value.trim(),
+    mweight: document.getElementById('h-mweight').value.trim(),
+    eweight: document.getElementById('h-eweight').value.trim(),
+  };
+  const indicator = document.getElementById('sync-indicator');
+  indicator.textContent = 'Saving…';
+  indicator.style.color = 'var(--text3)';
+
+  const params = new URLSearchParams(payload).toString();
+  const script = document.createElement('script');
+  script.src = SHEETS_URL + '?' + params + '&callback=sheetsSyncCallback';
+  script.onerror = () => {
+    indicator.textContent = 'Sync failed — check connection';
+    indicator.style.color = '#A32D2D';
+  };
+  document.body.appendChild(script);
+  setTimeout(() => { if (script.parentNode) script.parentNode.removeChild(script); }, 5000);
+}
+
+function sheetsSyncCallback(result) {
+  const indicator = document.getElementById('sync-indicator');
+  if (result && result.success) {
+    indicator.textContent = 'Saved to Google Sheets ✓';
+    indicator.style.color = 'var(--green-text)';
+    setTimeout(() => { indicator.textContent = ''; }, 3000);
+  } else {
+    indicator.textContent = 'Sync failed — check token';
+    indicator.style.color = '#A32D2D';
+  }
+}
+
+let syncTimer = null;
+function schedulSync() {
+  saveLocal();
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncToSheets, 1500);
+}
+
+
+  const fields = ['h-breakfast','h-lunch','h-dinner','h-other'];
+  const hasFood = fields.some(id => document.getElementById(id).value.trim());
+  if (!hasFood) {
+    document.getElementById('cal-total').textContent = '—';
+    document.getElementById('cal-unit').textContent = '';
+  }
+}
+
+function estimateBurned() {
+  const mworkout = document.getElementById('h-mworkout').value.trim();
+  const eworkout = document.getElementById('h-eworkout').value.trim();
+  const mweight = document.getElementById('h-mweight').value.trim();
+  const eweight = document.getElementById('h-eweight').value.trim();
+  if (!mworkout && !eworkout) {
+    alert('Enter at least one workout first.');
+    return;
+  }
+  const parts = [];
+  if (mworkout) parts.push('Morning workout: ' + mworkout);
+  if (eworkout) parts.push('Evening workout: ' + eworkout);
+  if (mweight) parts.push('Morning weight: ' + mweight + ' lbs');
+  if (eweight) parts.push('Evening weight: ' + eweight + ' lbs');
+  const q = 'Estimate total calories burned today from these workouts. Use my weight if provided to improve accuracy. Give me a total number and quick breakdown by workout:\n' + parts.join('\n');
+  window.open('https://claude.ai/new?q=' + encodeURIComponent(q), '_blank');
+}
+
+function estimateCals() {
+  const breakfast = document.getElementById('h-breakfast').value.trim();
+  const lunch = document.getElementById('h-lunch').value.trim();
+  const dinner = document.getElementById('h-dinner').value.trim();
+  const other = document.getElementById('h-other').value.trim();
+  const mworkout = document.getElementById('h-mworkout').value.trim();
+  const eworkout = document.getElementById('h-eworkout').value.trim();
+  const mweight = document.getElementById('h-mweight').value.trim();
+  const eweight = document.getElementById('h-eweight').value.trim();
+  if (!breakfast && !lunch && !dinner && !other) {
+    alert('Enter at least one meal first.');
+    return;
+  }
+  const parts = [];
+  if (breakfast) parts.push('Breakfast: ' + breakfast);
+  if (lunch) parts.push('Lunch: ' + lunch);
+  if (dinner) parts.push('Dinner: ' + dinner);
+  if (other) parts.push('Other: ' + other);
+  if (mworkout) parts.push('Morning workout: ' + mworkout);
+  if (eworkout) parts.push('Evening workout: ' + eworkout);
+  if (mweight) parts.push('Morning weight: ' + mweight + ' lbs');
+  if (eweight) parts.push('Evening weight: ' + eweight + ' lbs');
+  const q = 'Estimate total calories consumed today based on these meals and note any workout calories burned:\n' + parts.join('\n') + '\nGive me a quick number and brief breakdown.';
+  window.open('https://claude.ai/new?q=' + encodeURIComponent(q), '_blank');
+}
+
+const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const now=new Date();
+document.getElementById('datedisp').textContent=`${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`;
+renderP('wprior', wItems);
+renderP('pprior', pItems);
+buildTabs();
+renderNews();
+loadMeetings();
+loadLocal();
+</script>
+</body>
+</html>
